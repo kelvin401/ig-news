@@ -1,5 +1,7 @@
 import { GetStaticProps } from 'next';
 import Head from 'next/head';
+import { useSession } from 'next-auth/client';
+
 
 import { stripe } from '../services/stripe';
 
@@ -15,6 +17,8 @@ interface HomeProps {
 }
 
 export default function Home({ product }: HomeProps) {
+  const [session] = useSession()
+
   return (
     <>
       <Head>
@@ -23,7 +27,10 @@ export default function Home({ product }: HomeProps) {
         
         <main className={styles.contentContainer}>
           <section className={styles.hero}>
-            <span>👏 Hey, welcome </span>
+            {session
+              ? <span>👏 Hey, {session.user.name} </span>
+              : <span>👏 Hey, Welcome </span>
+            }
             <h1>News about the <span>React</span> world.</h1>
             <p>
               Get access all the publications <br />
@@ -39,7 +46,7 @@ export default function Home({ product }: HomeProps) {
   )
 }
 
-export const getServerSideProps: GetStaticProps = async() => {
+export const getStaticProps: GetStaticProps = async() => {
   const price = await stripe.prices.retrieve('price_1IcJmxFxYI3sgKUsafDJaP7W');
 
   const product = {
