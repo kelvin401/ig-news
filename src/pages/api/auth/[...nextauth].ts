@@ -12,18 +12,43 @@ export default NextAuth({
       clientSecret: process.env.GITHUB_SECRET,
       scope: 'read:user'
     }),
-    Providers.Facebook({
-      clientId: process.env.FACEBOOK_CLIENT_ID,
-      clientSecret: process.env.FACEBOOK_CLIENT_SECRET,
-    }),
-    Providers.Google({
-      clientId: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      authorizationUrl: 'https://accounts.google.com/o/oauth2/v2/auth?prompt=consent&access_type=offline&response_type=code',
-    }),
   ],
 
   callbacks: {
+    async session(session) {
+      try {
+        const userActiveSubscription = await fauna.query(
+          query.Get(
+            query.Intersection([
+              query.Match(
+                query.Index('subscription_by_user_ref'),
+                query.Select(
+                  'ref',
+                  query.Get(
+                    query.Match(
+                      query.Index('user_by_email'),
+                      query.Casefold(session.user.email)
+                    )
+                  )
+                )
+              ),
+              query.Match(
+                query.Index('subscription_by_status'),'active')
+            ])
+          )
+        )
+  
+        return {
+          ...session,
+          activeSubscription: userActiveSubscription,
+        }
+      } catch {
+        return {
+          ...session,
+          activeSubscription: null,
+        }
+      }
+    },
     async signIn(user, account, profile) {
       const { email } = user;
 
